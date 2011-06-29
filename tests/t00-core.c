@@ -675,6 +675,36 @@ BEGIN_TEST(filebuf0, "make sure git_filebuf_open doesn't delete an existing lock
 	must_pass(gitfo_unlink(testlock));
 END_TEST
 
+BEGIN_TEST(filebuf1, "make sure GIT_FILEBUF_APPEND works as expected")
+	git_filebuf file;
+	int fd;
+	char test[] = "test";
+
+	fd = gitfo_creat(test, 0644);
+	must_pass(fd);
+	must_pass(gitfo_write(fd, "libgit2 rocks\n", 14));
+	must_pass(gitfo_close(fd));
+
+	must_pass(git_filebuf_open(&file, test, GIT_FILEBUF_APPEND));
+	must_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+	must_pass(git_filebuf_commit(&file));
+
+	must_pass(gitfo_unlink(test));
+END_TEST
+
+BEGIN_TEST(filebuf2, "make sure git_filebuf_write writes large buffer correctly")
+	git_filebuf file;
+	char test[] = "test";
+	unsigned char buf[4096 * 4]; /* 2 * WRITE_BUFFER_SIZE */
+
+	memset(buf, 0xfe, sizeof(buf));
+	must_pass(git_filebuf_open(&file, test, 0));
+	must_pass(git_filebuf_write(&file, buf, sizeof(buf)));
+	must_pass(git_filebuf_commit(&file));
+
+	must_pass(gitfo_unlink(test));
+END_TEST
+
 BEGIN_SUITE(core)
 	ADD_TEST(string0);
 	ADD_TEST(string1);
@@ -698,4 +728,6 @@ BEGIN_SUITE(core)
 	ADD_TEST(dirent4);
 
 	ADD_TEST(filebuf0);
+	ADD_TEST(filebuf1);
+	ADD_TEST(filebuf2);
 END_SUITE
