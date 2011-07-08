@@ -244,6 +244,37 @@ BEGIN_TEST(write6, "write an object which is several bytes long")
     must_pass(remove_object_files(&some));
 END_TEST
 
+BEGIN_TEST(write7, "write a big object")
+    git_odb *db;
+    git_oid id;
+    git_odb_object *obj;
+    
+    const size_t obj_len = 2*1024*1024; 
+    
+    git_rawobj big_obj = {
+		NULL,
+		obj_len,
+		GIT_OBJ_BLOB
+	};
+	
+	big_obj.data = malloc(obj_len);
+	must_be_true(big_obj.data);
+	memset(big_obj.data, 0, obj_len);
+
+    must_pass(make_odb_dir());
+    must_pass(git_odb_open(&db, odb_dir));
+
+    must_pass(streaming_write(&id, db, &big_obj));
+
+    must_pass(git_odb_read(&obj, db, &id));
+    must_be_true(git_odb_object_size(obj) == obj_len);
+    must_be_true(memcmp(git_odb_object_data(obj), big_obj.data, obj_len) == 0);
+
+    free(big_obj.data); big_obj.data = NULL;
+    git_odb_object_close(obj);
+    git_odb_close(db);
+END_TEST
+
 BEGIN_SUITE(objwrite)
 	ADD_TEST(write0);
 	ADD_TEST(write1);
@@ -252,4 +283,5 @@ BEGIN_SUITE(objwrite)
 	ADD_TEST(write4);
 	ADD_TEST(write5);
 	ADD_TEST(write6);
+	ADD_TEST(write7);
 END_SUITE
